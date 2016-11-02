@@ -13,22 +13,20 @@ bb_component <- read.csv(filename5,header=TRUE,sep=",")
 #Edit the formatting to use SQL to drive analysis #Names are too long, all headers need to be
 #renamed 
 
-colnames(equity_currency) <-c("account_number","account_name","date","currency_name","tot_acc_mkt_val",
-								"currency_code")
+colnames(equity_currency) <-c("account_number","account_name","date","currency_name","tot_acc_mkt_val","currency_code")
 
-colnames(security_currency) <- c("date","currency_name","accrued_mkt_val","currency_code","security",
-									"source_account_number","source_account_name","report_account_number",
-									"report_account_name") 
+colnames(security_currency) <- c("date","currency_name","accrued_mkt_val","currency_code","security","source_account_number",
+				 "source_account_name","report_account_number","report_account_name") 
 
-colnames(detailed_report) <- c("report_account_number", "report_account_name", "date", "currency_name",
-								"tot_mkt_val_loc","tot_rec_mkt_val_loc", "tot_mkt_val_base", "tot_rec_mkt_val_base",
-								"tot_accrued_mkt_val","currency_code","avg_local_base_ex_rate")
+colnames(detailed_report) <- c("report_account_number", "report_account_name", "date", "currency_name","tot_mkt_val_loc",
+			       "tot_rec_mkt_val_loc", "tot_mkt_val_base", "tot_rec_mkt_val_base","tot_accrued_mkt_val",
+			       "currency_code","avg_local_base_ex_rate")
 
 colnames(counterparty_currency) <- c("report_account_number","report_account_name", "source_account_number",
-									"source_account_name","date","payable_currency_code","rec_currency_code",
-									"payable_units","receiveable_units")
+			             "source_account_name","date","payable_currency_code","rec_currency_code",
+				     "payable_units","receiveable_units")
 
-#Will be using SQL
+#Will be using SQL to drive the process
 library(sqldf)
 detailed_report$tot_accrued_mkt_val <- gsub('[,]','',detailed_report$tot_accrued_mkt_val)
 a <- sqldf("select date, currency_name, currency_code, tot_accrued_mkt_val from detailed_report 
@@ -37,7 +35,7 @@ a <- sqldf("select date, currency_name, currency_code, tot_accrued_mkt_val from 
 #Found a bug, the commas in the accrued mkt value comment throw off calculations, need to be reformatted
 security_currency$accrued_mkt_val <- gsub('[,]','',security_currency$accrued_mkt_val)
 b <- sqldf("select date, currency_code, currency_name, sum(accrued_mkt_val) tot_mkt_val from security_currency
-				group by currency_code order by currency_name")
+	    group by currency_code order by currency_name")
 
 #Merges data accrued so far
 c <- sqldf("select a.date, a.currency_code, a.currency_name,a.tot_accrued_mkt_val,b.tot_mkt_val from a 
@@ -92,24 +90,16 @@ f$fx_rate <- as.numeric(as.character(f$fx_rate))
 get_fx_fwd_usd <- function(f) {
 	f['flip_num'] <- 0
 	count <- 1
-	
 	for(i in f$flip) {
-		if(i =="Y") {
-			f$flip_num[count] <- 1
-		} else {
-			f$flip_num[count] <- 0
-		}
+		if(i =="Y") { f$flip_num[count] <- 1 } 
+		else { f$flip_num[count] <- 0 }
 		count <- count + 1
 	}
-	
 	f['fx_fwd_usd'] <- 0
 	count <- 1
 	for(i in f$flip_num) {
-		if(i ==1) {
-			f$fx_fwd_usd[count] <- f$fx_forwards_local[count] * f$fx_rate[count]
-		} else if(i==0) {
-			f$fx_fwd_usd[count] <- f$fx_forwards_local[count] / f$fx_rate[count]
-		} 
+		if(i ==1) { f$fx_fwd_usd[count] <- f$fx_forwards_local[count] * f$fx_rate[count]} 
+		else if(i==0) {f$fx_fwd_usd[count] <- f$fx_forwards_local[count] / f$fx_rate[count]} 
 		count <- count + 1
 	}
 	return(f)
@@ -128,7 +118,7 @@ write.csv(f,"C:\\Users\\sandovaj.AUTH\\Desktop\\currency_database\\tot_currency_
 
 #What we send out to NISA
 nisa_report <- subset(f,currency_code=="EUR"| currency_code=="GBP"|currency_code=="CHF"|currency_code=="SEK"|
-						currency_code=="AUD"|currency_code=="JPY")
+			currency_code=="AUD"|currency_code=="JPY")
 
 nisa_report <- sqldf("select date, currency_name, currency_code, tot_exp from nisa_report")
 
