@@ -42,17 +42,16 @@ c <- sqldf("select a.date, a.currency_code, a.currency_name,a.tot_accrued_mkt_va
 			inner join b on a.currency_code = b.currency_code")
 
 #Counterparty exposure
-
 counterparty_currency$payable_units <- gsub('[,]','',counterparty_currency$payable_units)
 d <- sqldf("select payable_currency_code, sum(payable_units) tot_pay_units from counterparty_currency where 
 		source_account_name!='NISA FX OVERLAY' group by payable_currency_code")
 colnames(d)[1] <- "currency_code"
-
 counterparty_currency$receiveable_units <- gsub('[,]','',counterparty_currency$receiveable_units)
 e <- sqldf("select rec_currency_code, sum(receiveable_units) tot_rec_units from counterparty_currency where 
 		source_account_name!='NISA FX OVERLAY' group by rec_currency_code")
 colnames(e)[1] <- "currency_code"
 
+#conduct an outer merge
 f <- merge(x=d,y=e,by="currency_code",all=TRUE)
 
 #Get rid of the NA values after the merge
@@ -76,7 +75,6 @@ f <- sqldf("select date, currency_code, currency_name, tot_accrued_mkt_val, tot_
 #Let's get a list of all the currencies we are active in and let's get their end-of-month fx rate
 #bb_currencies <- sqldf("select date, currency_code from f") 
 #write.csv(bb_currencies,"C:\\Users\\sandovaj.AUTH\\Desktop\\currency_database\\bb_component.csv")
-
 #Let's incorporate bloomberg values
 f <- sqldf("select f.date,f.currency_code,f.currency_name,f.tot_accrued_mkt_val,f.tot_mkt_val,f.match, f.fx_forwards_local,
 			bb_component.fx_rate,bb_component.flip from f inner join bb_component on f.currency_code = bb_component.currency_code
